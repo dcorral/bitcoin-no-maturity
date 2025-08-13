@@ -24,14 +24,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libtool autotools-dev automake pkg-config bsdmainutils python3 libevent-dev libboost-dev libsqlite3-dev libzmq3-dev qt6-base-dev qt6-tools-dev libqrencode-dev
+          sudo apt-get install -y build-essential libtool autotools-dev automake pkg-config bsdmainutils python3 libevent-dev libboost-dev libsqlite3-dev libzmq3-dev
       - name: Determine version
         id: version
         run: echo "VERSION=$(git describe --tags --always --dirty | sed 's/^v//')" >> "$GITHUB_OUTPUT"
       - name: Build
         run: |
           ./autogen.sh
-          ./configure --disable-tests --disable-bench
+          ./configure --without-gui --enable-wallet --disable-tests --disable-bench
           make $MAKEJOBS
       - name: Package artifact
         run: |
@@ -43,6 +43,7 @@ jobs:
         with:
           name: linux-artifact
           path: bitcoin-${{ steps.version.outputs.VERSION }}-x86_64-linux-gnu.tar.gz
+
   build-macos:
     name: Build macOS (arm64)
     runs-on: macos-14
