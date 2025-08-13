@@ -22,9 +22,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libtool autotools-dev automake pkg-config bsdmainutils python3 libevent-dev libboost-dev libsqlite3-dev libzmq3-dev
-      - name: Determine version
-        id: version
-        run: echo "VERSION=$(git describe --tags --always --dirty | sed 's/^v//')" >> "$GITHUB_OUTPUT"
       - name: Build
         run: |
           ./autogen.sh
@@ -32,14 +29,14 @@ jobs:
           make $MAKEJOBS
       - name: Package artifact
         run: |
-          mkdir -p bitcoin-${{ steps.version.outputs.VERSION }}-x86_64-linux-gnu/bin
-          cp src/bitcoind src/bitcoin-cli src/bitcoin-tx src/bitcoin-util src/bitcoin-wallet bitcoin-${{ steps.version.outputs.VERSION }}-x86_64-linux-gnu/bin/
-          tar -czf bitcoin-${{ steps.version.outputs.VERSION }}-x86_64-linux-gnu.tar.gz bitcoin-${{ steps.version.outputs.VERSION }}-x86_64-linux-gnu
+          mkdir -p bitcoin-${{ github.ref_name }}-x86_64-linux-gnu/bin
+          cp src/bitcoind src/bitcoin-cli src/bitcoin-tx src/bitcoin-util src/bitcoin-wallet bitcoin-${{ github.ref_name }}-x86_64-linux-gnu/bin/
+          tar -czf bitcoin-${{ github.ref_name }}-x86_64-linux-gnu.tar.gz bitcoin-${{ github.ref_name }}-x86_64-linux-gnu
       - name: Upload temporary artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifact
-          path: bitcoin-${{ steps.version.outputs.VERSION }}-x86_64-linux-gnu.tar.gz
+          path: bitcoin-${{ github.ref_name }}-x86_64-linux-gnu.tar.gz
 
   build-macos:
     name: Build macOS (arm64)
@@ -50,9 +47,6 @@ jobs:
       - name: Install dependencies
         run: |
           brew install automake libtool pkg-config python@3 boost libevent zeromq
-      - name: Determine version
-        id: version
-        run: echo "VERSION=$(git describe --tags --always --dirty | sed 's/^v//')" >> "$GITHUB_OUTPUT"
       - name: Build
         run: |
           ./autogen.sh
@@ -60,30 +54,33 @@ jobs:
           make $MAKEJOBS
       - name: Package artifact
         run: |
-          mkdir -p bitcoin-${{ steps.version.outputs.VERSION }}-arm64-apple-darwin/bin
-          cp src/bitcoind src/bitcoin-cli src/bitcoin-tx src/bitcoin-util src/bitcoin-wallet bitcoin-${{ steps.version.outputs.VERSION }}-arm64-apple-darwin/bin/
-          tar -czf bitcoin-${{ steps.version.outputs.VERSION }}-arm64-apple-darwin.tar.gz bitcoin-${{ steps.version.outputs.VERSION }}-arm64-apple-darwin
+          mkdir -p bitcoin-${{ github.ref_name }}-arm64-apple-darwin/bin
+          cp src/bitcoind src/bitcoin-cli src/bitcoin-tx src/bitcoin-util src/bitcoin-wallet bitcoin-${{ github.ref_name }}-arm64-apple-darwin/bin/
+          tar -czf bitcoin-${{ github.ref_name }}-arm64-apple-darwin.tar.gz bitcoin-${{ github.ref_name }}-arm64-apple-darwin
       - name: Upload temporary artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: bitcoin-${{ steps.version.outputs.VERSION }}-arm64-apple-darwin.tar.gz
+          path: bitcoin-${{ github.ref_name }}-arm64-apple-darwin.tar.gz
 
   release:
     name: Create Release and Upload Assets
     runs-on: ubuntu-latest
     needs: [build-linux, build-macos]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
           name: linux-artifact
+          path: artifacts/
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
           name: macos-artifact
+          path: artifacts/
+      - name: Move artifacts to current directory
+        run: |
+          mv artifacts/* ./
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
